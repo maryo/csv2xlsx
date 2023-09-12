@@ -30,7 +30,7 @@
 typedef char sheet_name[MAX_SHEET_NAME_LENGTH + 1];
 sheet_name assigned_sheet_names[MAX_SHEETS];
 
-bool sheet_exists(const char *sheet_name, int sheets_count) {
+bool sheet_exists(const char *sheet_name, size_t sheets_count) {
     for (int i = 0; i < sheets_count; i++) {
         if (strcmp(assigned_sheet_names[i], sheet_name) == 0) {
             return true;
@@ -164,12 +164,14 @@ int main(int argc, char **argv) {
     }
 
 	for (size_t i = 0; i < files->count - 1; i++) {
-        char sheet_name[MAX_SHEET_NAME_LENGTH + 1];
+        sheet_name sheet_name;
 
         if (sheet_names->count > i) {
             strcpy(sheet_name, sheet_names->sval[i]);
         } else {
-            strncpy(sheet_name, files->basename[i], strlen(files->basename[i]) - strlen(files->extension[i]));
+            size_t length = strlen(files->basename[i]) - strlen(files->extension[i]);
+            strncpy(sheet_name, files->basename[i], length);
+            sheet_name[length] = '\0';
         }
 
         generate_unique_sheet_name(sheet_name, assigned_sheet_names[i], i);

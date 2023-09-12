@@ -3,15 +3,16 @@ include(ExternalProject)
 # https://qiita.com/usagi/items/c5715c50bb56b65d0cd5
 ExternalProject_Add(
     googletest
-    PREFIX            ${CMAKE_CURRENT_BINARY_DIR}/external/googletest
-    INSTALL_DIR       ${CMAKE_CURRENT_BINARY_DIR}/external/googletest-install
-    GIT_REPOSITORY    https://github.com/google/googletest.git
-    GIT_TAG           release-1.11.0
-    CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/external/googletest-install
-                      -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                      -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                      -Dgtest_force_shared_crt=ON
+    PREFIX         ${CMAKE_CURRENT_BINARY_DIR}/external/googletest
+    INSTALL_DIR    ${CMAKE_CURRENT_BINARY_DIR}/external/googletest-install
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.11.0
+    CMAKE_ARGS     -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/external/googletest-install
+                   -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                   -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                   -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
+                   -Dgtest_force_shared_crt=ON
 )
 
 set(GOOGLETEST_LIBRARY gtest)

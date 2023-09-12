@@ -12,15 +12,15 @@ env:
 
 jobs:
   tag:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Short tag
       id: short_tag
-      if: ${{ startsWith(github.ref, 'refs/tags/v')  }}
+      if: ${{ startsWith(github.ref, 'refs/tags/v') }}
       run: echo "::set-output name=tag::$(basename ${{ github.ref }})"
     - name: Hash
       id: hash
-      if: ${{ startsWith(github.ref, 'refs/heads/')  }}
+      if: ${{ startsWith(github.ref, 'refs/heads/') }}
       run: echo "::set-output name=tag::${{ github.sha }}"
     outputs:
       tag: ${{ steps.short_tag.outputs.tag }}${{ steps.hash.outputs.tag }}
@@ -31,57 +31,67 @@ jobs:
     strategy:
       matrix:
         config:
+          - os: ubuntu-20.04
+            name: linux-amd64
+          - os: ubuntu-20.04
+            arch: arm64
+            name: linux-arm64
           - os: windows-latest
-            sys: mingw64
-            env: x86_64
-            name: win64
-          - os: windows-latest
-            sys: mingw32
-            env: i686
-            name: win32
+            name: windows-amd64
           - os: macos-latest
-            name: Darwin
-          - os: ubuntu-latest
-            name: Linux
+            name: darwin-amd64
+          - os: macos-latest
+            name: darwin-arm64
+            arch: arm64
     steps:
-    - name: Git config
-      if: ${{ matrix.config.os == 'windows-latest' }}
-      run: git config --global core.autocrlf input
-    - uses: actions/checkout@v2
-    - uses: msys2/setup-msys2@v2
-      if: ${{ matrix.config.os == 'windows-latest' }}
-      with:
-        msystem: ${{matrix.config.sys}}
-        install: mingw-w64-${{matrix.config.env}}-cmake mingw-w64-${{matrix.config.env}}-ninja mingw-w64-${{matrix.config.env}}-gcc
-    - shell: msys2 {0}
-      if: ${{ matrix.config.os == 'windows-latest' }}
-      run: |-
-        mkdir -p build
-        pushd build
-        cmake ..
-        cmake --build .
-        cpack
-        mv ${{ env.APP_NAME }}-*.zip ${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
-        popd
-    - shell: bash
-      if: ${{ matrix.config.os != 'windows-latest' }}
-      run: |-
-        mkdir -p build
-        pushd build
-        cmake ..
-        cmake --build .
-        cpack
-        mv ${{ env.APP_NAME }}-*.zip ${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
-        popd
-    - uses: actions/upload-artifact@v3
-      with:
-        name: ${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
-        path: build/${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
-
+      - name: Configure Git on Windows
+        if: ${{ matrix.config.os == 'windows-latest' }}
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v2
+      - name: Build
+        if: ${{ matrix.config.os != 'windows-latest' && matrix.config.arch != 'arm64' }}
+        run: |-
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build .
+      - name: Windows Build
+        if: ${{ matrix.config.os == 'windows-latest' }}
+        run: |-
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . --config Release
+      - name: Linux ARM64 Build
+        if: ${{ matrix.config.os != 'macos-latest' && matrix.config.arch == 'arm64' }}
+        run: |-
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/arm64_toolchain.cmake ..
+          cmake --build .
+      - name: macOS ARM64 Build
+        if: ${{ matrix.config.os == 'macos-latest' && matrix.config.arch == 'arm64' }}
+        run: |-
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_OSX_ARCHITECTURES=arm64 ..
+          cmake --build .
+      - name: Create archive
+        run: |-
+          cd build
+          cpack
+          mv ${{ env.APP_NAME }}-*.zip ${{ env.APP_NAME }}-${{ needs.tag.outputs.tag }}-${{ matrix.config.name }}.zip
+          cd ..
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
+          path: build/${{ env.APP_NAME }}-${{ needs.tag.outputs.tag}}-${{ matrix.config.name }}.zip
   release:
     needs: [build, tag]
-    runs-on: ubuntu-latest
-    if: ${{ startsWith(github.ref, 'refs/tags/v')  }}
+    runs-on: ubuntu-20.04
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - name: Create release
         id: create_release
@@ -98,15 +108,16 @@ jobs:
 
   upload:
     needs: [release, tag]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: ${{ startsWith(github.ref, 'refs/tags/v')  }}
     strategy:
       matrix:  
         target:
-        - Darwin
-        - Linux
-        - win32
-        - win64
+          - linux-amd64
+          - linux-arm64
+          - windows-amd64
+          - darwin-amd64
+          - darwin-arm64
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v2

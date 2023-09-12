@@ -19,6 +19,7 @@
 #include <libcsv.h>
 #include <xlsxwriter.h>
 #include <math.h>
+#include <limits.h>
 #include <stdarg.h>
 
 #include "libcsv2xlsx.h"
